@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Bootstrap theme example provided @ http://www.w3schools.com -->
+  <title>Waypoint</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css')}}">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/jquery.min.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap.min.js')}}"></script>
+  <style>
+  body {
+      font: 20px Montserrat, sans-serif;
+      line-height: 1.8;
+    
+  }
+
+  p {font-size: 16px;}
+  .margin {margin-bottom: 45px;}
+  .bg-1 { 
+      background-color: #1abc9c; /* Green */
+      color: #ffffff;
+  }
+  .bg-2 { 
+      background-color: #474e5d; /* Dark Blue */
+      color: #ffffff;
+  }
+  .bg-3 { 
+      background-color: #ffffff; /* White */
+      color: #555555;
+  }
+  .bg-4 { 
+      background-color: #2f2f2f; /* Black Gray */
+      color: #fff;
+  }
+  .container-fluid {
+      padding-top: 70px;
+      padding-bottom: 70px;
+  }
+  .navbar {
+      padding-top: 15px;
+      padding-bottom: 15px;
+      border: 0;
+      border-radius: 0;
+      margin-bottom: 0;
+      font-size: 12px;
+      letter-spacing: 5px;
+  }
+  .navbar-nav  li a:hover {
+      color: #1abc9c !important;
+  }
+   /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+  #map {
+    height: 100%;
+  }
+
+        
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .controls {
+        margin-top: 10px;
+        border: 1px solid transparent;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        height: 32px;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      #origin-input,
+      #destination-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 200px;
+        opacity: 1
+      }
+
+      #origin-input:focus,
+      #destination-input:focus {
+        border-color: #4d90fe;
+      }
+
+      #mode-selector {
+        color: #fff;
+        background-color: #4d90fe;
+        margin-left: 12px;
+        padding: 5px 11px 0px 11px;
+      }
+
+      #mode-selector label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
+      <a class="navbar-brand" href="#">Waypoint</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#">HOME</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- First Container -->
+
+<div class="container-fluid bg-1 text-center">
+  <h3 class="margin">Who Am I?</h3>
+  <img src="{{url_for('static', filename='bird.jpg')}}" class="img-responsive img-circle margin" style="display:inline" alt="Bird" width="350" height="350">
+  <h3>I'm an waypoint tracker</h3>
+</div>
+
+<input id="origin-input" class="controls" type="text" style="color:#000000;"
+  placeholder="Origin location">
+
+<input id="destination-input" class="controls" type="text" style="color:#000000;"
+  placeholder="Destination location">
+
+<div id="mode-selector" class="controls">
+
+  <input type="radio" name="type" id="changemode-transit">
+  <label for="changemode-transit">Transit</label>
+
+  <input type="radio" name="type" id="changemode-driving" checked="checked">
+  <label for="changemode-driving">Driving</label>
+</div>
+<div id ="map" ></div>
+
+<!-- Google maps javascript API -> https://developers.google.com/maps/documentation/javascript/tutorial -->
+<script>
+      
+      function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+          mapTypeControl: true,
+          center: {lat: -33.8688, lng: 151.2195},
+          zoom: 13
+        });
+        var stepDisplay = new google.maps.InfoWindow;
+        var markerArray =[];
+        var geocoder = new google.maps.Geocoder;
+        new AutocompleteDirectionsHandler(map,markerArray,stepDisplay,geocoder);
+        new google.maps.event.addListenerOnce(map, 'idle', function(){
+        jQuery('.gm-style-iw').prev('div').remove();
+      });
+      }
+
+       /**
+        * @constructor
+       */
+      function AutocompleteDirectionsHandler(map,markerArray,stepDisplay,geocoder) {
+        this.map = map;
+        this.markerArray = markerArray;
+        this.originPlaceId = null;
+        this.destinationPlaceId = null;
+        this.stepDisplay = stepDisplay;
+        this.geocoder = geocoder;
+        this.travelMode = 'DRIVING';
+        this.originInput = document.getElementById('origin-input');
+        this.destinationInput = document.getElementById('destination-input');
+        var modeSelector = document.getElementById('mode-selector');
+        this.directionsService = new google.maps.DirectionsService;
+        this.directionsDisplay = new google.maps.DirectionsRenderer;
+        this.directionsDisplay.setMap(map);
+
+        var originAutocomplete = new google.maps.places.Autocomplete(
+            this.originInput, {placeIdOnly: true});
+        var destinationAutocomplete = new google.maps.places.Autocomplete(
+            this.destinationInput, {placeIdOnly: true});
+
+        this.setupClickListener('changemode-transit', 'TRANSIT',map,markerArray,stepDisplay,geocoder);
+        this.setupClickListener('changemode-driving', 'DRIVING',map,markerArray,stepDisplay,geocoder);
+
+        this.setupPlaceChangedListener(originAutocomplete, 'ORIG',map,markerArray,stepDisplay,geocoder);
+        this.setupPlaceChangedListener(destinationAutocomplete, 'DEST',map,markerArray,stepDisplay,geocoder);
+
+        this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(this.originInput);
+        this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(this.destinationInput);
+        this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(modeSelector);
+
+      }
+
+      // solution provided for solving descrepancy between HTTP response and JavaScript API response.
+      // link - https://gis.stackexchange.com/questions/15197/google-maps-v3-in-javascript-api-render-route-obtained-with-web-api
+      //this function updates response object recieved from HTTP API Call
+      function typecastRoutes(routes){
+        routes.forEach(function(route){
+        route.bounds = asBounds(route.bounds);
+        // I don't think `overview_path` is used but it exists on the
+        // response of DirectionsService.route()
+        route.overview_path = asPath(route.overview_polyline);
+      
+        route.legs.forEach(function(leg){
+            leg.start_location = asLatLng(leg.start_location);
+            leg.end_location   = asLatLng(leg.end_location);
+
+            leg.steps.forEach(function(step){
+                step.start_location = asLatLng(step.start_location);
+                step.end_location   = asLatLng(step.end_location);
+                step.path = asPath(step.polyline);
+            });
+
+        });
+    });
+    }
+   
+  function asBounds(boundsObject){
+    return new google.maps.LatLngBounds(asLatLng(boundsObject.southwest),
+                                    asLatLng(boundsObject.northeast));
+  }
+
+  function asLatLng(latLngObject){
+    return new google.maps.LatLng(latLngObject.lat, latLngObject.lng);
+  }
+
+  function asPath(encodedPolyObject){
+    return google.maps.geometry.encoding.decodePath( encodedPolyObject.points );
+  }
+      // Sets a listener on a radio button to change the filter type on Places
+      // Autocomplete.
+      AutocompleteDirectionsHandler.prototype.setupClickListener = function(id, mode,map,markerArray,stepDisplay,geocoder) {
+        var radioButton = document.getElementById(id);
+        var me = this;
+        radioButton.addEventListener('click', function() {
+          me.travelMode = mode;
+          me.route(map,markerArray,stepDisplay,geocoder);
+        });
+      };
+
+      AutocompleteDirectionsHandler.prototype.setupPlaceChangedListener = function(autocomplete, mode,map,markerArray,stepDisplay,geocoder) {
+        var me = this;
+        autocomplete.bindTo('bounds', this.map);
+        autocomplete.addListener('place_changed', function() {
+          var place = autocomplete.getPlace();
+          if (!place.place_id) {
+            window.alert("Please select an option from the dropdown list.");
+            return;
+          }
+          if (mode === 'ORIG') {
+            me.originPlaceId = place.place_id;
+          } else {
+            me.destinationPlaceId = place.place_id;
+          }
+          me.route(map,markerArray,stepDisplay,geocoder);
+        });
+
+      };
+
+      AutocompleteDirectionsHandler.prototype.route = function(map,markerArray,stepDisplay,geocoder) {
+
+        if(this.originPlaceId == this.destinationPlaceId){
+          window.alert("Origin and destination are same...!");
+          return;
+        }
+        if (!this.originPlaceId || !this.destinationPlaceId) {
+          return;
+        }
+        var me = this;
+
+         $.getJSON('http://localhost:5000/routes?origin='+this.originInput.value+'&destination='+this.destinationInput.value+'&mode='+this.travelMode,function(result, status) {
+          if (status === 'success') {
+                //directionsDisplay.setDirections (result);
+                 result.request = {origin:me.originInput,destination:me.destinationInput,travelMode:'DRIVING'}
+                 typecastRoutes(result.routes);
+                 for (var i = 0; i < markerArray.length; i++) {
+                         markerArray[i].setMap(null);
+                  }
+                 if(result.routes.length>0){
+                 me.directionsDisplay.setDirections(result);
+                 //pointsArray = result.routes[0].overview_path;
+                  var myRoute = result.routes[0].legs[0];
+                  var cities = new Set();
+                  
+                  for (var i = 0; i < myRoute.steps.length; i++) {
+                         var marker = new google.maps.Marker({
+                         position: myRoute.steps[i].start_location,
+                         map: map
+                      });
+                     weather = myRoute.steps[i].weather_info;
+                     city = myRoute.steps[i].city;
+                     city = city.bold();
+                     description = weather["description"];
+                     main = weather["main"];
+                     temp = weather["temperature"];
+                     message = city+" - "+"Weather - "+main+", Temperature = "+Number(temp.toFixed(1)).toString();
+                     attachInstructionText(marker, message,stepDisplay,map);
+                     if (!cities.has(city)){
+                      cities.add(city);
+                     }
+                     else{
+                      marker.setMap(null);
+                     }
+                     markerArray[i] = marker;
+                    }    
+                  }
+                  else{
+                     window.alert('Transit route not available from '+me.originInput.value+' to '+me.destinationInput.value)
+                  }              
+                                    
+          } else {
+            window.alert('Directions request failed due to ' + status);
+          }
+        });
+      };
+
+      function attachInstructionText(marker, text,stepDisplay,map) {
+      google.maps.event.addListener(marker, 'mouseover', function() {
+      stepDisplay.setContent(text);
+      stepDisplay.open(map, marker);
+     });
+      }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAs2R7yNwrbyJlaGpWaUycJDGgE2lR0pcM&libraries=places,geometry&callback=initMap"
+        async defer></script>
+<!-- Third Container (Grid) -->
+<div class="container-fluid bg-3 text-center">    
+  <h3 class="margin">What To Find Here?</h3><br>
+  <div class="row">
+    <div class="col-sm-4">
+      <p>Find cities along the route.</p>
+      <img src="{{url_for('static', filename='road.jpg')}}" class="img-responsive margin" style="width:100%" alt="Image">
+    </div>
+    <div class="col-sm-4"> 
+      <p>Know weather along the route.</p>
+      <img src="{{url_for('static', filename='weather.jpg')}}" class="img-responsive margin" style="width:100%" alt="Image">
+    </div>
+    <div class="col-sm-4"> 
+      <p>It's better to be prepared than sorry...!</p>
+      <img src="{{url_for('static', filename='wet.jpg')}}" class="img-responsive margin" style="width:100%" alt="Image">
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="container-fluid bg-4 text-center">
+  <p>ruturaj_molawade</p>
+</footer>
+
+</body>
+</html>
